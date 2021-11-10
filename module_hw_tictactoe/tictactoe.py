@@ -116,4 +116,4 @@ def check_win(board_status, size=3) -> int:
                 or board_status[2] == board_status[4] == board_status[6]
             ):
                 return board_status[4]
-        return 0
+    return 0
