@@ -23,16 +23,16 @@ class Player:
             (7, 7)
         )
         self.start_level = 0
-        self.search_levels = 3
+        self.search_levels = 1
         self.player_no = 1
-        # self.weight = [[500,  5, 100, 50, 50, 100,  5, 500],
-        #                [  5,  1,  10, 10, 10,  10,  1,   5],
-        #                [100, 10,  30, 20, 20,  30, 10, 100],
-        #                [ 50, 10,  20, 10, 10,  20, 10,  50],
-        #                [ 50, 10,  20, 10, 10,  20, 10,  50],
-        #                [100, 10,  30, 20, 20,  30, 10, 100],
-        #                [  5,  1,  10, 10, 10,  10,  1,   5],
-        #                [500,  5, 100, 50, 50, 100,  5, 500]]
+        self.weight = np.array([[120,-20, 20,  5,  5, 20,-20,120],
+                                [-20,-40, -5, -5, -5, -5,-40,-20],
+                                [ 20, -5, 15,  3,  3, 15, -5, 20],
+                                [  5, -5,  3,  3,  3,  3, -5,  5],
+                                [  5, -5,  3,  3,  3,  3, -5,  5],
+                                [ 20, -5, 15,  3,  3, 15, -5, 20],
+                                [-20,-40, -5, -5, -5, -5,-40,-20],
+                                [120,-20, 20,  5,  5, 20,-20,120]])
         self.c = np.sqrt(2*np.log(2)/np.log(np.e))
 
     def move(self, board_inf):
@@ -46,6 +46,8 @@ class Player:
         return:
             your moves: 你要下哪裡，它會是一個一維的 list ex:[1,2]
         """
+        if len(board_inf[0]) == 1:
+            return board_inf[0][0]
         self.player_no = board_inf[2]
         valid_loc = []
         valid_moves = {1:[], -1:[]}
@@ -53,15 +55,21 @@ class Player:
             self.add_valid_loc(row, col, board_inf[1], valid_loc)
         self.update_valid_moves(board_inf[1], valid_loc, valid_moves)
         
-        # if board_inf[3] < 40:
+        if board_inf[3] <= 50:
+            self.search_levels = 1
             # return choice(board_inf[0])
             # max_total = 50
-        # else:
-            # max_total = 100
+            # return self.find_max(board_inf[1], valid_loc, valid_moves, self.start_level)
+        # elif board_inf[3] <=40:
+            
+        else:
+            self.search_levels = 100
+            # max_total = 5000
+            # return self.MCS_UCB(board_inf[1], self.player_no, valid_loc, valid_moves, max_total)
 
         # return self.MCS(board_inf[1], self.player_no, valid_loc, valid_moves, max_total)
         # return self.MCS_UCB(board_inf[1], self.player_no, valid_loc, valid_moves, max_total)
-        return self.find_max(board_inf[1], self.player_no, valid_loc, valid_moves, self.start_level)
+        return self.find_max(board_inf[1], valid_loc, valid_moves, self.start_level)
         # return unique_valid_moves[max(score, key=score.get)]
     
     def isInside(self, row, col) -> bool:
@@ -170,44 +178,82 @@ class Player:
         return unique_valid_moves[max(score, key=score.get)]
     
     def get_value(self, board_state, current_player, valid_moves):
-        unique_valid_moves = np.unique(np.array(valid_moves[current_player])[:, :2], axis=0)
-        mobility = len(unique_valid_moves)
+        if not valid_moves[current_player]:
+            mobility = 0
+        else:
+            unique_valid_moves = np.unique(np.array(valid_moves[current_player])[:, :2], axis=0)
+            mobility = len(unique_valid_moves)
         disc_count = 0.01*len(np.argwhere(board_state == current_player))
         cornor_bonus = 0
         for cornor in self.cornor:
-            if (unique_valid_moves == cornor).all(axis=1).any():
+            if (np.argwhere(board_state == current_player) == cornor).all(axis=1).any():
                 cornor_bonus += 10
         return mobility + disc_count + cornor_bonus
     
-    def get_endgame_value(self, board_state, current_player):
-        winner = self.check_who_wins(board_state)
-        if winner == current_player:
-            return 100
-        elif winner == 0:
-            return 20
+    def get_WPC(self, board_state):
+        if self.player_no == 1:
+            return np.sum(np.array(board_state)*self.weight)
         else:
-            return 0
+            return -np.sum(np.array(board_state)*self.weight)
     
-    def find_max(self, board_state, current_player, valid_loc, valid_moves, level):
-        if not (valid_moves[current_player] or valid_moves[-current_player]):
-            return self.get_endgame_value(board_state, current_player)
+    def get_endgame_value(self, board_state):
+        # winner = self.check_who_wins(board_state)
+        # if winner == self.player_no:
+        #     return 100
+        # elif winner == 0:
+        #     return 20
+        # else:
+        #     return 0
+        # print(len(np.argwhere(board_state == self.player_no)))
+        return len(np.argwhere(board_state == self.player_no))
+    
+    def find_max(self, board_state, valid_loc, valid_moves, level):
+        if not (valid_moves[self.player_no] or valid_moves[-self.player_no]):
+            return self.get_endgame_value(board_state)
+            # return self.get_WPC(board_state)
         if level >= self.search_levels:
-            return self.get_value(board_state, current_player, valid_moves)
+            # return self.get_value(board_state, self.player_no, valid_moves) - self.get_value(board_state, -self.player_no, valid_moves)
+            return self.get_WPC(board_state)
         else:
-            if not valid_moves[current_player]:
-                return self.find_max(board_state, -current_player, valid_loc, valid_moves, level+1)
+            if not valid_moves[self.player_no]:
+                return self.find_min(board_state, valid_loc, valid_moves, level+1)
             else:
                 value = {}
-                unique_valid_moves = np.unique(np.array(valid_moves[current_player])[:, :2], axis=0)
+                unique_valid_moves = np.unique(np.array(valid_moves[self.player_no])[:, :2], axis=0)
                 for idx, move in enumerate(unique_valid_moves):
                     board_cp = board_state.copy()
                     valid_loc_cp = valid_loc.copy()
                     valid_moves_cp = valid_moves.copy()
-                    self.action(board_cp, current_player, move, valid_loc_cp, valid_moves_cp)
-                    value[idx] = self.find_max(board_cp, -current_player, valid_loc_cp, valid_moves_cp, level+1)
+                    self.action(board_cp, self.player_no, move, valid_loc_cp, valid_moves_cp)
+                    value[idx] = self.find_min(board_cp, valid_loc_cp, valid_moves_cp, level+1)
                 if not level:
+                    # print(max(value, key=value.get))
                     return unique_valid_moves[max(value, key=value.get)]
                 else:
                     return max(value, key=value.get)
+                
+    def find_min(self, board_state, valid_loc, valid_moves, level):
+        if not (valid_moves[self.player_no] or valid_moves[-self.player_no]):
+            return self.get_endgame_value(board_state)
+            # return self.get_WPC(board_state)
+        if level >= self.search_levels:
+            # return self.get_value(board_state, self.player_no, valid_moves) - self.get_value(board_state, -self.player_no, valid_moves)
+            return self.get_WPC(board_state)
+        else:
+            if not valid_moves[-self.player_no]:
+                return self.find_max(board_state, valid_loc, valid_moves, level+1)
+            else:
+                value = {}
+                unique_valid_moves = np.unique(np.array(valid_moves[-self.player_no])[:, :2], axis=0)
+                for idx, move in enumerate(unique_valid_moves):
+                    board_cp = board_state.copy()
+                    valid_loc_cp = valid_loc.copy()
+                    valid_moves_cp = valid_moves.copy()
+                    self.action(board_cp, -self.player_no, move, valid_loc_cp, valid_moves_cp)
+                    value[idx] = self.find_max(board_cp, valid_loc_cp, valid_moves_cp, level+1)
+                if not level:
+                    return unique_valid_moves[min(value, key=value.get)]
+                else:
+                    return min(value, key=value.get)
         
     
