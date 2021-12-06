@@ -3,7 +3,7 @@ import numpy as np
 import Board
 
 
-class Player:
+class Player1:
     def __init__(self):
         self.name = "Player"
         self.directions = (
@@ -376,7 +376,7 @@ class Node:
             self.Wi += 1
             
         
-class Tree(Player):
+class Player(Player1):
     def __init__(self):
         super().__init__()
         self.root = None
