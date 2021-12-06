@@ -55,7 +55,7 @@ class Player:
             self.add_valid_loc(row, col, board_inf[1], valid_loc)
         self.update_valid_moves(board_inf[1], valid_loc, valid_moves)
         
-        if board_inf[3] <= 50:
+        if board_inf[3] <= 49:
             self.search_levels = 1
             # return choice(board_inf[0])
             # max_total = 50
@@ -69,8 +69,8 @@ class Player:
 
         # return self.MCS(board_inf[1], self.player_no, valid_loc, valid_moves, max_total)
         # return self.MCS_UCB(board_inf[1], self.player_no, valid_loc, valid_moves, max_total)
-        return self.find_max(board_inf[1], valid_loc, valid_moves, self.start_level)
-        # return unique_valid_moves[max(score, key=score.get)]
+        return self.find_max(board_inf[1], valid_loc, valid_moves, self.start_level, -float("inf"), float("inf"))
+
     
     def isInside(self, row, col) -> bool:
         return True if 0 <= row < 8 and 0 <= col < 8 else False
@@ -80,7 +80,7 @@ class Player:
         result = {}
         for p, c in zip(players, counts):
             result[p] = c
-        if result[1] == result[-1]:
+        if result.get(1) == result.get(-1):
             return 0
         else:
             return max(result, key=result.get)
@@ -121,13 +121,18 @@ class Player:
         row, col = move
         board_state[row, col] = current_player
         self.add_valid_loc(row, col, board_state, valid_loc)
-        nplist = np.array(valid_moves[current_player])
-        condition = (nplist[:, :2] == [row, col]).all(axis=1)
-        for d in nplist[condition][:, -2:]:
-            this_row, this_col = row + d[0], col + d[1]
-            while (board_state[this_row, this_col] != current_player):
-                board_state[this_row, this_col] = current_player
-        self.update_valid_moves(board_state, valid_loc, valid_moves)
+        if valid_moves[current_player]:
+            nplist = np.array(valid_moves[current_player])
+            condition = (nplist[:, :2] == [row, col]).all(axis=1)
+            for d in nplist[condition][:, -2:]:
+                this_row, this_col = row + d[0], col + d[1]
+                while (board_state[this_row, this_col] == -current_player):
+                    board_state[this_row, this_col] = current_player
+                    this_row, this_col = this_row + d[0], this_col + d[1]
+            self.update_valid_moves(board_state, valid_loc, valid_moves)
+        else:
+            # print("valid move is empty!")
+            return
     
     def simulate(self, board_state, current_player, move, valid_loc, valid_moves):
         board_cp = board_state.copy()
@@ -207,7 +212,7 @@ class Player:
         # print(len(np.argwhere(board_state == self.player_no)))
         return len(np.argwhere(board_state == self.player_no))
     
-    def find_max(self, board_state, valid_loc, valid_moves, level):
+    def find_max(self, board_state, valid_loc, valid_moves, level, alpha, beta):
         if not (valid_moves[self.player_no] or valid_moves[-self.player_no]):
             return self.get_endgame_value(board_state)
             # return self.get_WPC(board_state)
@@ -216,7 +221,7 @@ class Player:
             return self.get_WPC(board_state)
         else:
             if not valid_moves[self.player_no]:
-                return self.find_min(board_state, valid_loc, valid_moves, level+1)
+                return self.find_min(board_state, valid_loc, valid_moves, level+1, alpha, beta)
             else:
                 value = {}
                 unique_valid_moves = np.unique(np.array(valid_moves[self.player_no])[:, :2], axis=0)
@@ -225,14 +230,17 @@ class Player:
                     valid_loc_cp = valid_loc.copy()
                     valid_moves_cp = valid_moves.copy()
                     self.action(board_cp, self.player_no, move, valid_loc_cp, valid_moves_cp)
-                    value[idx] = self.find_min(board_cp, valid_loc_cp, valid_moves_cp, level+1)
+                    value[idx] = self.find_min(board_cp, valid_loc_cp, valid_moves_cp, level+1, alpha, beta)
+                    if value[idx] > alpha:
+                        alpha = value[idx]
+                    if alpha > beta:
+                        return alpha
                 if not level:
-                    # print(max(value, key=value.get))
                     return unique_valid_moves[max(value, key=value.get)]
                 else:
                     return max(value, key=value.get)
                 
-    def find_min(self, board_state, valid_loc, valid_moves, level):
+    def find_min(self, board_state, valid_loc, valid_moves, level, alpha, beta):
         if not (valid_moves[self.player_no] or valid_moves[-self.player_no]):
             return self.get_endgame_value(board_state)
             # return self.get_WPC(board_state)
@@ -241,7 +249,7 @@ class Player:
             return self.get_WPC(board_state)
         else:
             if not valid_moves[-self.player_no]:
-                return self.find_max(board_state, valid_loc, valid_moves, level+1)
+                return self.find_max(board_state, valid_loc, valid_moves, level+1, alpha, beta)
             else:
                 value = {}
                 unique_valid_moves = np.unique(np.array(valid_moves[-self.player_no])[:, :2], axis=0)
@@ -250,10 +258,304 @@ class Player:
                     valid_loc_cp = valid_loc.copy()
                     valid_moves_cp = valid_moves.copy()
                     self.action(board_cp, -self.player_no, move, valid_loc_cp, valid_moves_cp)
-                    value[idx] = self.find_max(board_cp, valid_loc_cp, valid_moves_cp, level+1)
+                    value[idx] = self.find_max(board_cp, valid_loc_cp, valid_moves_cp, level+1, alpha, beta)
+                    if value[idx] < beta:
+                        beta = value[idx]
+                    if alpha > beta:
+                        return beta
                 if not level:
                     return unique_valid_moves[min(value, key=value.get)]
                 else:
                     return min(value, key=value.get)
+
+                
+class Node:
+    def __init__(self, player=None, move=None, parent=None):
+        self.player = player
+        self.move = move
+        self.Ni = 0.
+        self.Wi = 0.
+        self.parent = parent
+        self.children = []
         
+    def get_move(self):
+        return self.move
+        
+    def UCB(self, N, c=np.sqrt(2*np.log(2)/np.log(np.e))):
+        if self.Ni == 0:
+            return(float("inf"))
+        elif N == 0:
+            return self.Wi/self.Ni
+        else:
+            return self.Wi/self.Ni + c*np.sqrt(np.log(N)/self.Ni)
+        
+    def score(self):
+        if self.Ni == 0:
+            return 0
+        else:
+            return self.Wi/self.Ni
     
+    def find_max_UCB_child(self):
+        idx = 0
+        max_UCB = -float("inf")
+        for i, child in enumerate(self.children):
+            UCB = child.UCB(self.Ni)
+            if UCB > max_UCB:
+                idx = i
+                max_UCB = UCB
+        return self.children[idx]
+    
+    def find_max_score_child(self):
+        idx = 0
+        max_score = -float("inf")
+        for i, child in enumerate(self.children):
+            score = child.score()
+            if score > max_score:
+                idx = i
+                max_score = score
+        return self.children[idx]
+    
+    def isLeaf(self):
+        if not self.children:
+            return True
+        else:
+            return False
+        
+    def inTree(self):
+        if self.Ni != 0:
+            return True
+        else:
+            return False
+        
+    def expand(self, valid_moves, next_player=None):
+        # unique_valid_moves = np.unique(np.array(valid_moves[next_player])[:, :2], axis=0)
+        # for i in unique_valid_moves:
+        #     self.children.append(Node(next_player, i, self))
+        
+           
+        # if next_player == 1:
+            # next_valid_moves = np.array([[2,3],
+            #                              [3,2],
+            #                              [4,5],
+            #                              [5,4]])
+            # for i in next_valid_moves:
+                # self.children.append(Node(next_player, i, self))
+        # elif next_player == -1:
+            # next_valid_moves = np.array([[2,4],
+            #                              [4,2],
+            #                              [3,5],
+            #                              [5,3]])
+            # for i in next_valid_moves:
+                # self.children.append(Node(next_player, i, self))
+        # else:
+        if next_player == None:
+            next_player = -self.player
+        if len(valid_moves[next_player]) == 0:
+            if len(valid_moves[-next_player]) == 0:
+                return
+            else:
+                unique_valid_moves = np.unique(np.array(valid_moves[-next_player])[:, :2], axis=0)
+                for i in unique_valid_moves:
+                    self.children.append(Node(-next_player, i, self))
+        else:
+            unique_valid_moves = np.unique(np.array(valid_moves[next_player])[:, :2], axis=0)
+            for i in unique_valid_moves:
+                self.children.append(Node(next_player, i, self))
+        
+        
+            
+    def pick(self, mode="random"):
+        if mode == "random":
+            return choice(self.children)
+        elif mode == "max":
+            return choice(self.children)
+    
+    def update(self, winner):
+        self.Ni += 1
+        if winner == self.player:
+            self.Wi += 1
+            
+        
+class Tree(Player):
+    def __init__(self):
+        super().__init__()
+        self.root = None
+        self.current_node = self.root
+        self.board_cp = None
+        self.current_player = 0
+        self.valid_loc_cp = None
+        self.valid_moves_cp = None
+        self.keep_board_state = np.array([[ 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [ 0, 0, 0,-1, 1, 0, 0, 0],
+                                          [ 0, 0, 0, 1,-1, 0, 0, 0],
+                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [ 0, 0, 0, 0, 0, 0, 0, 0]])
+        self.keep_valid_loc = []
+        self.keep_valid_moves = {1:[], -1:[]}
+        self.keep_current_player = 0
+        for row, col in np.argwhere(self.keep_board_state != 0):
+            self.add_valid_loc(row, col, self.keep_board_state, self.keep_valid_loc)
+        self.update_valid_moves(self.keep_board_state, self.keep_valid_loc, self.keep_valid_moves)
+        
+    def initialize(self, board_state, current_player, valid_loc, valid_moves):
+        self.current_node = self.root
+        self.board_cp = board_state.copy()
+        self.current_player = current_player
+        self.valid_loc_cp = valid_loc.copy()
+        self.valid_moves_cp = valid_moves.copy()
+    
+    def move(self, board_inf):
+        # print("對手落子:", board_inf[4])
+        self.player_no = board_inf[2]
+        valid_loc = []
+        valid_moves = {1:[], -1:[]}
+        for row, col in np.argwhere(board_inf[1] != 0):
+            self.add_valid_loc(row, col, board_inf[1], valid_loc)
+        self.update_valid_moves(board_inf[1], valid_loc, valid_moves)
+        self.initialize(board_inf[1], board_inf[2], valid_loc, valid_moves)
+        
+        if self.keep_current_player == 0:
+            self.keep_board_state = np.array([[ 0, 0, 0, 0, 0, 0, 0, 0],
+                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                              [ 0, 0, 0,-1, 1, 0, 0, 0],
+                                              [ 0, 0, 0, 1,-1, 0, 0, 0],
+                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
+                                              [ 0, 0, 0, 0, 0, 0, 0, 0]])
+            self.keep_valid_loc = []
+            self.keep_valid_moves = {1:[], -1:[]}
+            for row, col in np.argwhere(self.keep_board_state != 0):
+                self.add_valid_loc(row, col, self.keep_board_state, self.keep_valid_loc)
+            self.update_valid_moves(self.keep_board_state, self.keep_valid_loc, self.keep_valid_moves)
+            self.keep_current_player = 1
+            if board_inf[2] == -1:
+                self.action(self.keep_board_state, self.keep_current_player, board_inf[4], self.keep_valid_loc, self.keep_valid_moves)
+                self.keep_current_player *= -1
+                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+            # else:
+                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+        else:
+            if (np.array(board_inf[4]) == [-1, -1]).all():
+                self.keep_current_player *= -1
+                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+            else:
+                self.action(self.keep_board_state, self.keep_current_player, board_inf[4], self.keep_valid_loc, self.keep_valid_moves)
+                self.keep_current_player *= -1
+                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+        
+        
+
+        self.root = Node()
+        self.initialize(board_inf[1], board_inf[2], valid_loc, valid_moves)
+        self.root.expand(self.valid_moves_cp, self.player_no)
+
+        printlist = []
+        for i in self.root.children:
+            printlist.append(i.get_move())
+        # print("root 的 children:(未下)", printlist)
+
+
+            
+                    
+        # if self.current_player == -self.player_no:
+        #     if (np.array(board_inf[4]) == [-1, -1]).all():
+        #         print("對手還沒下或者沒得下")
+        #         self.current_player = self.player_no
+        #     else:
+        #         for i, child in enumerate(self.root.children):
+        #             if (np.array(child.get_move()) == board_inf[4]).all():
+        #                 self.root = child
+        #                 self.root.parent = None
+        #                 self.current_player = self.player_no
+        #                 if not self.root.children:
+        #                     self.root.expand(self.valid_moves_cp)
+        #                 break
+        # print("當前root move:", self.root.get_move())
+        
+
+        
+        # self.initialize(board_inf[1], board_inf[2], valid_loc, valid_moves)
+        next_node = self.MCTS(board_inf[1], board_inf[2], valid_loc, valid_moves, 100)
+        
+        # self.initialize(board_inf[1], board_inf[2], valid_loc, valid_moves)
+        # self.root = next_node
+        # self.root.parent = None
+        # self.action(self.board_cp, self.current_player, self.root.get_move(), self.valid_loc_cp, self.valid_moves_cp)
+        # self.current_player = -next_node.player
+        # if not self.root.children:
+        #     self.root.expand(self.valid_moves_cp)
+
+        # return choice(board_inf[0])
+        # print("最終決定下:", next_node.get_move())
+        # printlist = []
+        # for i in next_node.children:
+        #     printlist.append(i.get_move())
+        # print("對手的選擇有:", printlist)
+        
+        self.action(self.keep_board_state, self.keep_current_player, next_node.get_move(), self.keep_valid_loc, self.keep_valid_moves)
+        self.keep_current_player *= -1
+        # if self.keep_valid_moves[self.keep_current_player]:
+            # print("keep對手現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+        # print(self.keep_board_state)
+        if not self.keep_valid_moves[self.keep_current_player] and not self.keep_valid_moves[-self.keep_current_player]:
+            self.keep_current_player = 0
+        
+        return next_node.get_move()
+    
+    def selection(self):
+        if self.current_node.isLeaf():
+            # print(self.current_node.get_move())
+            return
+        else:
+            next_node = self.current_node.find_max_UCB_child()
+            self.action(self.board_cp, self.current_player, next_node.get_move(), self.valid_loc_cp, self.valid_moves_cp)
+            self.current_node = next_node
+            self.current_player = -next_node.player
+            self.selection()
+    
+    def expansion(self):
+        self.current_node.expand(self.valid_moves_cp)
+        if self.current_node.children:
+            next_node = self.current_node.pick()
+            self.action(self.board_cp, next_node.player, next_node.get_move(), self.valid_loc_cp, self.valid_moves_cp)
+            self.current_node = next_node
+            self.current_player = -next_node.player
+        
+    def simulation(self)->int:
+        while self.valid_moves_cp[self.current_player] or self.valid_moves_cp[-self.current_player]:
+            if not self.valid_moves_cp[self.current_player]:
+                self.current_player *= -1
+            else:
+                next_move = choice(np.unique(np.array(self.valid_moves_cp[self.current_player])[:, :2], axis=0))
+                self.action(self.board_cp, self.current_player, next_move, self.valid_loc_cp, self.valid_moves_cp)
+                self.current_player *= -1
+        return self.check_who_wins(self.board_cp)
+        
+    def backpropagation(self, winner):
+        self.current_node.update(winner)
+        if self.current_node.parent:
+            self.current_node = self.current_node.parent
+            self.backpropagation(winner)
+            
+    def MCTS(self, board_state, current_player, valid_loc, valid_moves, max_total)->Node:
+        for i in range(max_total):
+            self.initialize(board_state, current_player, valid_loc, valid_moves)
+            self.selection()
+            if self.current_node.inTree():
+                self.expansion()
+            winner = self.simulation()
+            self.backpropagation(winner)
+        return self.root.find_max_score_child()
+        
+
+
+
+        
