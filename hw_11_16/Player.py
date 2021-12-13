@@ -385,20 +385,20 @@ class Player(Player1):
         self.current_player = 0
         self.valid_loc_cp = None
         self.valid_moves_cp = None
-        self.keep_board_state = np.array([[ 0, 0, 0, 0, 0, 0, 0, 0],
-                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                          [ 0, 0, 0,-1, 1, 0, 0, 0],
-                                          [ 0, 0, 0, 1,-1, 0, 0, 0],
-                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                          [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                          [ 0, 0, 0, 0, 0, 0, 0, 0]])
-        self.keep_valid_loc = []
-        self.keep_valid_moves = {1:[], -1:[]}
-        self.keep_current_player = 0
-        for row, col in np.argwhere(self.keep_board_state != 0):
-            self.add_valid_loc(row, col, self.keep_board_state, self.keep_valid_loc)
-        self.update_valid_moves(self.keep_board_state, self.keep_valid_loc, self.keep_valid_moves)
+        # self.keep_board_state = np.array([[ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                   [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                   [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                   [ 0, 0, 0,-1, 1, 0, 0, 0],
+        #                                   [ 0, 0, 0, 1,-1, 0, 0, 0],
+        #                                   [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                   [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                   [ 0, 0, 0, 0, 0, 0, 0, 0]])
+        # self.keep_valid_loc = []
+        # self.keep_valid_moves = {1:[], -1:[]}
+        # self.keep_current_player = 0
+        # for row, col in np.argwhere(self.keep_board_state != 0):
+        #     self.add_valid_loc(row, col, self.keep_board_state, self.keep_valid_loc)
+        # self.update_valid_moves(self.keep_board_state, self.keep_valid_loc, self.keep_valid_moves)
         
     def initialize(self, board_state, current_player, valid_loc, valid_moves):
         self.current_node = self.root
@@ -417,38 +417,38 @@ class Player(Player1):
         self.update_valid_moves(board_inf[1], valid_loc, valid_moves)
         self.initialize(board_inf[1], board_inf[2], valid_loc, valid_moves)
         
-        if self.keep_current_player == 0:
-            self.keep_board_state = np.array([[ 0, 0, 0, 0, 0, 0, 0, 0],
-                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                              [ 0, 0, 0,-1, 1, 0, 0, 0],
-                                              [ 0, 0, 0, 1,-1, 0, 0, 0],
-                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                              [ 0, 0, 0, 0, 0, 0, 0, 0],
-                                              [ 0, 0, 0, 0, 0, 0, 0, 0]])
-            self.keep_valid_loc = []
-            self.keep_valid_moves = {1:[], -1:[]}
-            for row, col in np.argwhere(self.keep_board_state != 0):
-                self.add_valid_loc(row, col, self.keep_board_state, self.keep_valid_loc)
-            self.update_valid_moves(self.keep_board_state, self.keep_valid_loc, self.keep_valid_moves)
-            self.keep_current_player = 1
-            if board_inf[2] == -1:
-                self.action(self.keep_board_state, self.keep_current_player, board_inf[4], self.keep_valid_loc, self.keep_valid_moves)
-                self.keep_current_player *= -1
-                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
-                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
-            # else:
-                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
-                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
-        else:
-            if (np.array(board_inf[4]) == [-1, -1]).all():
-                self.keep_current_player *= -1
-                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
-                # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
-            else:
-                self.action(self.keep_board_state, self.keep_current_player, board_inf[4], self.keep_valid_loc, self.keep_valid_moves)
-                self.keep_current_player *= -1
-                # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+        # if self.keep_current_player == 0:
+        #     self.keep_board_state = np.array([[ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                       [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                       [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                       [ 0, 0, 0,-1, 1, 0, 0, 0],
+        #                                       [ 0, 0, 0, 1,-1, 0, 0, 0],
+        #                                       [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                       [ 0, 0, 0, 0, 0, 0, 0, 0],
+        #                                       [ 0, 0, 0, 0, 0, 0, 0, 0]])
+        #     self.keep_valid_loc = []
+        #     self.keep_valid_moves = {1:[], -1:[]}
+        #     for row, col in np.argwhere(self.keep_board_state != 0):
+        #         self.add_valid_loc(row, col, self.keep_board_state, self.keep_valid_loc)
+        #     self.update_valid_moves(self.keep_board_state, self.keep_valid_loc, self.keep_valid_moves)
+        #     self.keep_current_player = 1
+        #     if board_inf[2] == -1:
+        #         self.action(self.keep_board_state, self.keep_current_player, board_inf[4], self.keep_valid_loc, self.keep_valid_moves)
+        #         self.keep_current_player *= -1
+        #         # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+        #         # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+        #     # else:
+        #         # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+        #         # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+        # else:
+        #     if (np.array(board_inf[4]) == [-1, -1]).all():
+        #         self.keep_current_player *= -1
+        #         # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
+        #         # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
+        #     else:
+        #         self.action(self.keep_board_state, self.keep_current_player, board_inf[4], self.keep_valid_loc, self.keep_valid_moves)
+        #         self.keep_current_player *= -1
+        #         # print("keep現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
                 # print("keep現在可以下的位置:", self.keep_valid_moves[self.keep_current_player])
         
         
@@ -457,9 +457,9 @@ class Player(Player1):
         self.initialize(board_inf[1], board_inf[2], valid_loc, valid_moves)
         self.root.expand(self.valid_moves_cp, self.player_no)
 
-        printlist = []
-        for i in self.root.children:
-            printlist.append(i.get_move())
+        # printlist = []
+        # for i in self.root.children:
+        #     printlist.append(i.get_move())
         # print("root 的 children:(未下)", printlist)
 
 
@@ -500,13 +500,13 @@ class Player(Player1):
         #     printlist.append(i.get_move())
         # print("對手的選擇有:", printlist)
         
-        self.action(self.keep_board_state, self.keep_current_player, next_node.get_move(), self.keep_valid_loc, self.keep_valid_moves)
-        self.keep_current_player *= -1
+        # self.action(self.keep_board_state, self.keep_current_player, next_node.get_move(), self.keep_valid_loc, self.keep_valid_moves)
+        # self.keep_current_player *= -1
         # if self.keep_valid_moves[self.keep_current_player]:
             # print("keep對手現在可以下的位置:", np.unique(np.array(self.keep_valid_moves[self.keep_current_player])[:, :2], axis=0))
         # print(self.keep_board_state)
-        if not self.keep_valid_moves[self.keep_current_player] and not self.keep_valid_moves[-self.keep_current_player]:
-            self.keep_current_player = 0
+        # if not self.keep_valid_moves[self.keep_current_player] and not self.keep_valid_moves[-self.keep_current_player]:
+        #     self.keep_current_player = 0
         
         return next_node.get_move()
     
